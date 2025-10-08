@@ -1,8 +1,11 @@
 import { mkdir, access, rename } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import path from 'node:path';
+import dotenv from 'dotenv';
 
-export const PROCESSED_FILES_DIR = 'imagenes-procesadas';
+const baseDir = process.env.FILES_BASE_DIR || process.cwd();
+const processedDir = process.env.PROCESSED_FILES_DIR || 'processed-images';
+export const PROCESSED_FILES_DIR = `${baseDir}/${processedDir}`;
 
 export async function ensureProcessedDirectoryExists(): Promise<string> {
   const processingPath = path.join(process.cwd(), PROCESSED_FILES_DIR);

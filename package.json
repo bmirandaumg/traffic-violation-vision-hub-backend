@@ -2,18 +2,26 @@
   "name": "watcher",
   "module": "index.ts",
   "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node --loader ts-node/esm index.ts"
+  },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/async": "^3.2.25",
+    "@types/bun": "latest",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@types/pg": "^8.10.9",
     "async": "^3.2.6",
+    "bun": "^1.2.23",
     "chokidar": "^4.0.3",
     "dotenv": "^17.2.1",
     "ollama-ocr": "^0.0.2",
-    "pg": "^8.16.3",
-    "@types/pg": "^8.10.9"
+    "pg": "^8.16.3"
   }
 }

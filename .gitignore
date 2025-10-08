@@ -174,5 +174,5 @@ dist
 # Finder (MacOS) folder config
 .DS_Store
 
-imagenes-procesadas/
-imagenes/
+processed-images/
+images/

@@ -43,7 +43,9 @@ const cargo = async.cargo(
         async (filePath: string): Promise<void> => {
           try {
             logger.info(`Procesando archivo: ${filePath}`);
+            console.log('Antes de llamar a resolvePath:', filePath);
             const jsonFilePath = resolvePath(filePath);
+            console.log('Después de llamar a resolvePath:', jsonFilePath);
             logger.info(`Ruta resuelta: ${JSON.stringify(jsonFilePath)}`);
             const ocrResult = await runOCR(filePath);
             logger.info(`Resultado OCR: ${JSON.stringify(ocrResult)}`);
