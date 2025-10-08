@@ -7,6 +7,8 @@ import { resolvePath } from "./business-logic/file-explode";
 import { log } from "console";
 import { processRecord } from "./business-logic/db-process";
 import { moveFileToProcessed, toRelativePath } from "./business-logic/file-utils";
+import 'dotenv/config';
+import { json } from "stream/consumers";
 
 // Configuración
 interface Config {
@@ -51,7 +53,7 @@ const cargo = async.cargo(
             logger.info(`Resultado OCR: ${JSON.stringify(ocrResult)}`);
 
             // Mover el archivo a la carpeta de procesados
-            const newPath = await moveFileToProcessed(filePath);
+            const newPath = await moveFileToProcessed(filePath,jsonFilePath.cruise);
             const newPathRelative = toRelativePath(newPath);
 
             await processRecord(
