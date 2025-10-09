@@ -5,20 +5,13 @@ Eres un asistente de OCR para análisis de fotomultas.
 Analiza la imagen y devuelve la información estrictamente en formato JSON con la siguiente estructura:
 
 {
-  "videoNumber": "<número de video>",
   "date": "<fecha en formato dd/mm/yyyy>",
   "time": "<hora en formato HH:mm:ss>",
   "location": "<ubicación>",
   "speedLimit": "<límite de velocidad con unidad>",
   "measuredSpeed": "<velocidad detectada con unidad>",
-  "distance": "<distancia detectada con unidad>",
-  "fileName": "<nombre de archivo>",
-  "serialNumber": "<número de serie>",
   "vehicle": {
-    "plate": "<placa>",
-    "brand": "<marca del vehículo>",
-    "color": "<color del vehículo>",
-    "type": "<tipo de vehículo: sedan, SUV, moto, etc.>"
+    "plate": "<placa>"
   }
 }
 
@@ -37,11 +30,11 @@ async function runOCRWithRetries(imagePath: string, attempt = 1): Promise<any> {
       filePath: imagePath,
       systemPrompt: TRAFFIC_OCR_SYSTEM_PROMPT,
     });
-
+    console.log('Respuesta cruda del OCR:', text);
     const result = JSON.parse(text);
     
     // Verificar si el resultado tiene la estructura esperada
-    if (!result.videoNumber || !result.date || !result.vehicle) {
+    if (!result.date || !result.vehicle) {
       throw new Error("Resultado incompleto");
     }
 
