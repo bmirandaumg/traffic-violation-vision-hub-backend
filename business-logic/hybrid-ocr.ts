@@ -1,5 +1,6 @@
 import { runHeaderOCR, type HeaderInfo } from './tesseract-ocr.js';
 import { runPlateOCR } from './ai-image-recognition.js';
+import { metricsCollector } from './ocr-metrics.js';
 import path from 'path';
 
 interface CompleteOCRResult {
@@ -27,6 +28,13 @@ interface CompleteOCRResult {
 async function runHybridOCR(imagePath: string): Promise<CompleteOCRResult> {
   console.log(`\n=== Iniciando OCR híbrido para: ${path.basename(imagePath)} ===`);
   
+  // Métricas de tiempo
+  const startTime = Date.now();
+  let headerTime = 0;
+  let plateTime = 0;
+  let headerAttempts = 1;
+  let plateAttempts = 1;
+  
   const result: CompleteOCRResult = {
     date: '',
     time: '',
@@ -44,11 +52,17 @@ async function runHybridOCR(imagePath: string): Promise<CompleteOCRResult> {
     }
   };
 
-  // Ejecutar ambos OCR en paralelo para mayor eficiencia
+  // Ejecutar ambos OCR en paralelo para mayor eficiencia con medición de tiempo
+  const headerStartTime = Date.now();
+  const plateStartTime = Date.now();
+  
   const [headerResult, plateResult] = await Promise.allSettled([
     runHeaderOCR(imagePath),
     runPlateOCR(imagePath)
   ]);
+
+  headerTime = Date.now() - headerStartTime;
+  plateTime = Date.now() - plateStartTime;
 
   // Procesar resultado del header (Tesseract)
   if (headerResult.status === 'fulfilled') {
@@ -78,6 +92,32 @@ async function runHybridOCR(imagePath: string): Promise<CompleteOCRResult> {
     console.log('❌ OCR de placa falló:', plateResult.reason);
     result.processingInfo!.errors!.push(`Plate OCR: ${plateResult.reason}`);
   }
+
+  // Calcular tiempo total
+  const totalTime = Date.now() - startTime;
+
+  // Registrar métricas
+  metricsCollector.recordProcessing({
+    fileName: path.basename(imagePath),
+    success: result.processingInfo!.headerOCRSuccess || result.processingInfo!.plateOCRSuccess,
+    totalTime: totalTime,
+    headerResult: {
+      success: result.processingInfo!.headerOCRSuccess,
+      time: headerTime,
+      fields: {
+        date: result.date,
+        time: result.time,
+        location: result.location,
+        speedLimit: result.speedLimit,
+        measuredSpeed: result.measuredSpeed
+      }
+    },
+    plateResult: {
+      success: result.processingInfo!.plateOCRSuccess,
+      time: plateTime,
+      attempts: plateAttempts
+    }
+  });
 
   // Validar resultado final
   const isValid = validateOCRResult(result);
@@ -153,11 +193,36 @@ async function runPlateOCROnly(imagePath: string): Promise<any> {
   return await runPlateOCR(imagePath);
 }
 
+/**
+ * Genera reporte de métricas de rendimiento
+ */
+function generateMetricsReport(): string {
+  return metricsCollector.generateReport();
+}
+
+/**
+ * Exporta las métricas como JSON para análisis
+ */
+function exportMetricsData() {
+  return metricsCollector.exportMetrics();
+}
+
+/**
+ * Reinicia las métricas (útil para nuevas sesiones de prueba)
+ */
+function resetMetrics(): void {
+  metricsCollector.reset();
+  console.log('🔄 Métricas reiniciadas');
+}
+
 export { 
   runOCR, 
   runHybridOCR, 
   runHeaderOCROnly, 
   runPlateOCROnly,
-  validateOCRResult
+  validateOCRResult,
+  generateMetricsReport,
+  exportMetricsData,
+  resetMetrics
 };
 export type { CompleteOCRResult };

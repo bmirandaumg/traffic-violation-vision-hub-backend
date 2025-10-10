@@ -1,4 +1,4 @@
-import { runOCR, runHeaderOCROnly, runPlateOCROnly } from './hybrid-ocr.js';
+import { runOCR, runHeaderOCROnly, runPlateOCROnly, generateMetricsReport, exportMetricsData, resetMetrics } from './hybrid-ocr.js';
 import path from 'path';
 import fs from 'fs';
 
@@ -212,8 +212,12 @@ async function testHybridOCRWithCustomPath(customPath: string) {
     return;
   }
 
+  // Reiniciar métricas para esta sesión de prueba
+  resetMetrics();
+  
   console.log(`📁 Carpeta de prueba: ${testFolderPath}`);
   console.log(`📷 Encontradas ${imageFiles.length} imágenes`);
+  console.log('🧪 Iniciando nueva sesión de métricas...');
   console.log('═'.repeat(80));
 
   const results: any[] = [];
@@ -280,6 +284,20 @@ async function testHybridOCRWithCustomPath(customPath: string) {
     results.filter(r => !r.success).forEach(r => {
       console.log(`   • ${r.file}: ${r.error || 'Error desconocido'}`);
     });
+  }
+
+  // Generar reporte detallado de métricas
+  console.log('\n' + generateMetricsReport());
+
+  // Exportar métricas como JSON para análisis posterior
+  const metricsData = exportMetricsData();
+  const metricsFileName = `metrics-${new Date().toISOString().replace(/:/g, '-').split('.')[0]}.json`;
+  
+  try {
+    fs.writeFileSync(metricsFileName, JSON.stringify(metricsData, null, 2));
+    console.log(`💾 Métricas exportadas a: ${metricsFileName}`);
+  } catch (error) {
+    console.log('⚠️ No se pudieron exportar las métricas:', error);
   }
 
   console.log('\n✅ === PRUEBAS COMPLETADAS ===');

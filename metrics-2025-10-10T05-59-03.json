@@ -1,0 +1,50 @@
+{
+  "totalProcessed": 16,
+  "totalSuccessful": 16,
+  "totalFailed": 0,
+  "successRate": 100,
+  "tesseract": {
+    "processed": 16,
+    "successful": 16,
+    "failed": 0,
+    "successRate": 100,
+    "averageProcessingTime": 19432.3125,
+    "fieldSuccessRates": {
+      "date": 100,
+      "time": 100,
+      "location": 100,
+      "speedLimit": 100,
+      "measuredSpeed": 100
+    }
+  },
+  "aiOCR": {
+    "processed": 16,
+    "successful": 16,
+    "failed": 0,
+    "successRate": 100,
+    "averageProcessingTime": 19432.3125,
+    "retryStats": {
+      "firstAttemptSuccess": 16,
+      "secondAttemptSuccess": 0,
+      "thirdAttemptSuccess": 0,
+      "totalFailures": 0
+    }
+  },
+  "performance": {
+    "averageTotalTime": 19432.375,
+    "averageHeaderTime": 19432.3125,
+    "averagePlateTime": 19432.3125,
+    "slowestImage": {
+      "fileName": "-0-21-2024-jp-g--0.jpg",
+      "time": 23104
+    },
+    "fastestImage": {
+      "fileName": "-0-52-2024-jp-g--0.jpg",
+      "time": 17734
+    }
+  },
+  "session": {
+    "startTime": "2025-10-10T05:53:52.462Z",
+    "imagesPerMinute": 3.0875215885298575
+  }
+}
