@@ -1,7 +1,7 @@
 import { logger } from "../modules/logger";
 import { connect, query, close } from "../modules/pg-connector";
 
-async function processRecord(jsonFilePath, ocrResult, filePath: string) {
+async function processRecord(jsonFilePath: any, ocrResult: any, filePath: string) {
   await connect();
   try {
     const cruiseExist = "SELECT id FROM cruise WHERE cruise_name = $1";

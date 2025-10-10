@@ -1,8 +1,9 @@
-import chokidar, { FSWatcher } from "chokidar";
+import chokidar from "chokidar";
+import type { FSWatcher } from "chokidar";
 import async from "async";
 import path, { resolve } from "path";
 import { logger } from "./modules/logger";
-import { runOCR } from "./business-logic/ai-image-recognition";
+import { runOCR } from "./business-logic/hybrid-ocr.js";
 import { resolvePath } from "./business-logic/file-explode";
 import { log } from "console";
 import { processRecord } from "./business-logic/db-process";
@@ -13,14 +14,14 @@ import { json } from "stream/consumers";
 // Configuración
 interface Config {
   watchDir: string;
-  watchOptions: chokidar.WatchOptions;
+  watchOptions: any;
   cargoSize: number;
 }
 
 const CONFIG: Config = {
   watchDir: "./images", // Directorio a observar
   watchOptions: {
-    ignored: (path, stats) => stats?.isFile() && !path.endsWith(".jpg"),
+    ignored: (path: string, stats?: any) => stats?.isFile() && !path.endsWith(".jpg"),
     persistent: true,
     awaitWriteFinish: {
       stabilityThreshold: 4000,

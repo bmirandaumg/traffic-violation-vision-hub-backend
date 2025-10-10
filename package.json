@@ -4,11 +4,13 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "start": "node --loader ts-node/esm index.ts"
+    "start": "node --loader ts-node/esm index.ts",
+    "test-ocr": "node --loader ts-node/esm business-logic/test-hybrid-ocr.ts"
   },
   "devDependencies": {
     "@types/async": "^3.2.25",
     "@types/bun": "latest",
+    "@types/sharp": "^0.32.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   },
@@ -22,6 +24,8 @@
     "chokidar": "^4.0.3",
     "dotenv": "^17.2.1",
     "ollama-ocr": "^0.0.2",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "sharp": "^0.34.4",
+    "tesseract.js": "^6.0.1"
   }
 }

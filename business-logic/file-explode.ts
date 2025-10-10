@@ -1,6 +1,6 @@
 import path from "path";
 
-function resolvePath(filePath) {
+function resolvePath(filePath: string) {
   const pathSplit = filePath.split(path.sep); // Dividir la ruta en partes
   const cruise = pathSplit[1]; // Ejemplo: "2calle_Final_Oriente_Z_10"
   // const photoDateStr = pathSplit[1]; // Ejemplo: "15082024"
@@ -11,7 +11,7 @@ function resolvePath(filePath) {
   return { date, cruise, photoName };
 }
 
-function processDate(dateStr) {
+function processDate(dateStr: string) {
   console.log(`processDate: dateStr=${dateStr}`);
   if (dateStr.length !== 8) {
     throw new Error("Formato de fecha inválido. Se espera DDMMYYYY.");

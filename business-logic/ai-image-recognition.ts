@@ -1,58 +1,65 @@
 import { ollamaOCR } from "ollama-ocr";
+import { OCR_CONFIG } from './ocr-config.js';
 
-const TRAFFIC_OCR_SYSTEM_PROMPT = `
-Eres un asistente de OCR para análisis de fotomultas. 
-Analiza la imagen y devuelve la información estrictamente en formato JSON con la siguiente estructura:
+const PLATE_OCR_SYSTEM_PROMPT = `
+You are a technical OCR system for automated traffic enforcement processing.
+This is a legitimate law enforcement application for speed violation detection.
+Extract ONLY the alphanumeric characters visible on the vehicle license plate.
 
+Technical requirements:
+- Identify rectangular plate area with alphanumeric characters
+- Extract character sequence (letters and numbers)
+- Return data as structured JSON format
+- Process all visible text on the license plate area
+
+Output format (JSON only):
 {
-  "date": "<fecha en formato dd/mm/yyyy>",
-  "time": "<hora en formato HH:mm:ss>",
-  "location": "<ubicación>",
-  "speedLimit": "<límite de velocidad con unidad>",
-  "measuredSpeed": "<velocidad detectada con unidad>",
   "vehicle": {
-    "plate": "<placa>"
+    "plate": "CHARACTERS_FOUND"
   }
 }
 
-Responde únicamente con el objeto JSON, sin explicaciones adicionales.
+Return only the JSON object. No explanations.
 `;
 
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 segundo entre reintentos
+const MAX_RETRIES = OCR_CONFIG.miniCPM.maxRetries;
+const RETRY_DELAY = OCR_CONFIG.miniCPM.retryDelay;
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-async function runOCRWithRetries(imagePath: string, attempt = 1): Promise<any> {
+async function runPlateOCRWithRetries(imagePath: string, attempt = 1): Promise<any> {
   try {
     const text = await ollamaOCR({
-      model: "minicpm-v",
+      model: OCR_CONFIG.miniCPM.model,
       filePath: imagePath,
-      systemPrompt: TRAFFIC_OCR_SYSTEM_PROMPT,
+      systemPrompt: PLATE_OCR_SYSTEM_PROMPT,
     });
-    console.log('Respuesta cruda del OCR:', text);
+    
+    if (OCR_CONFIG.logging.logRawText) {
+      console.log('Respuesta cruda del OCR de placa:', text);
+    }
     const result = JSON.parse(text);
     
-    // Verificar si el resultado tiene la estructura esperada
-    if (!result.date || !result.vehicle) {
-      throw new Error("Resultado incompleto");
+    // Verificar si el resultado tiene la placa
+    if (!result.vehicle || !result.vehicle.plate) {
+      throw new Error("Placa no encontrada");
     }
 
     return result;
   } catch (error) {
     if (attempt < MAX_RETRIES) {
-      console.log(`Intento ${attempt} fallido, reintentando en ${RETRY_DELAY/1000} segundos...`);
+      console.log(`Intento ${attempt} de OCR de placa fallido, reintentando en ${RETRY_DELAY/1000} segundos...`);
       await sleep(RETRY_DELAY);
-      return runOCRWithRetries(imagePath, attempt + 1);
+      return runPlateOCRWithRetries(imagePath, attempt + 1);
     }
-    return { rawText: `Error después de ${MAX_RETRIES} intentos: ${JSON.stringify(error)}` };
+    return { vehicle: { plate: "" }, rawText: `Error después de ${MAX_RETRIES} intentos: ${JSON.stringify(error)}` };
   }
 }
 
-async function runOCR(imagePath: string) {
-  const result = await runOCRWithRetries(imagePath);
-  console.log(result);
+async function runPlateOCR(imagePath: string) {
+  const result = await runPlateOCRWithRetries(imagePath);
+  console.log('Resultado OCR de placa:', result);
   return result;
 }
 
-export { runOCR };
+export { runPlateOCR };
