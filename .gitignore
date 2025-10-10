@@ -1,5 +1,11 @@
 # Based on https://raw.githubusercontent.com/github/gitignore/main/Node.gitignore
 
+# Carpetas de métricas y reportes (archivos generados dinámicamente)
+metrics/
+reports/
+reportes_tesis/
+*.metrics.json
+
 # Logs
 
 logs

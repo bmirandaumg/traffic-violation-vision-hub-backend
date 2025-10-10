@@ -291,7 +291,14 @@ async function testHybridOCRWithCustomPath(customPath: string) {
 
   // Exportar métricas como JSON para análisis posterior
   const metricsData = exportMetricsData();
-  const metricsFileName = `metrics-${new Date().toISOString().replace(/:/g, '-').split('.')[0]}.json`;
+  
+  // Crear carpeta de métricas si no existe
+  const metricsDir = './metrics';
+  if (!fs.existsSync(metricsDir)) {
+    fs.mkdirSync(metricsDir, { recursive: true });
+  }
+  
+  const metricsFileName = `${metricsDir}/metrics-${new Date().toISOString().replace(/:/g, '-').split('.')[0]}.json`;
   
   try {
     fs.writeFileSync(metricsFileName, JSON.stringify(metricsData, null, 2));

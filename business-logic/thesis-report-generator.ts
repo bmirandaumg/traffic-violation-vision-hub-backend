@@ -197,7 +197,7 @@ AI_OCR_Promedio,${this.metrics.aiOCR.averageProcessingTime.toFixed(0)},${(this.m
   /**
    * Genera reporte completo con archivos de análisis
    */
-  generateCompleteReport(outputDir: string = './reportes_tesis'): void {
+  generateCompleteReport(outputDir: string = './reports'): void {
     // Crear directorio si no existe
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
