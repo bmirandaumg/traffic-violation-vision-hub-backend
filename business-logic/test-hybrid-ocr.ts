@@ -9,8 +9,8 @@ import fs from 'fs';
 async function testHybridOCR() {
   console.log('🧪 === INICIANDO PRUEBAS DEL SISTEMA OCR HÍBRIDO ===\n');
   
-  // Carpeta de prueba (ajustar según tu estructura)
-  const testFolderPath = './images/06042025/Columpio_V_H_Oriente_Z_15';
+  // Carpeta de prueba (100 imágenes para análisis estadístico completo)
+  const testFolderPath = './processed-images/Columpio_V_H_Oriente_Z_15';
   
   if (!fs.existsSync(testFolderPath)) {
     console.log('❌ No se encontró la carpeta de prueba en:', testFolderPath);
