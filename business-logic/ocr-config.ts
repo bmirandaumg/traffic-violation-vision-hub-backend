@@ -28,8 +28,6 @@ export const OCR_CONFIG = {
     maxRetries: 3,
     retryDelay: 1000, // milisegundos
     language: 'english', // Inglés para mejor precisión en estructuras JSON
-    // Modelos alternativos para probar:
-    alternativeModels: ['llava', 'llava:13b', 'moondream']
   },
   
   // Configuración de validación

@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "start": "node --loader ts-node/esm index.ts",
-    "test-ocr": "node --loader ts-node/esm business-logic/test-hybrid-ocr.ts"
+    "start": "bun run index.ts",
+    "start:node": "node --loader ts-node/esm index.ts"
   },
   "devDependencies": {
     "@types/async": "^3.2.25",

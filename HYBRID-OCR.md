@@ -58,16 +58,19 @@ business-logic/
 ├── hybrid-ocr.ts              # Orquestador principal
 ├── tesseract-ocr.ts           # OCR tradicional para header
 ├── ai-image-recognition.ts    # OCR con IA para placas
-├── ocr-config.ts              # Configuraciones del sistema
-└── test-hybrid-ocr.ts         # Pruebas del sistema
+└── ocr-config.ts              # Configuraciones del sistema
+
+Nota: El antiguo script de pruebas `test-hybrid-ocr.ts` fue retirado durante la simplificación. Las pruebas ahora se realizan ejecutando directamente el watcher o invocando las funciones desde un script temporal.
 ```
 
 ## 🚀 Instalación y Configuración
 
 ### 1. Instalar Dependencias
 
+Proyecto inicializado con Bun. Instala dependencias (incluye sharp y tesseract.js declaradas en package.json si corresponde):
+
 ```bash
-npm install tesseract.js sharp
+bun install
 ```
 
 ### 2. Configurar Variables de Entorno
@@ -80,17 +83,22 @@ IMAGES_DIR=images
 PROCESSED_FILES_DIR=processed-images
 ```
 
-### 3. Configurar Ollama (para MiniCPM-V)
+### 3. Configurar Ollama (MiniCPM-V)
 
-Asegúrate de tener Ollama instalado y el modelo MiniCPM-V disponible:
-
-```bash
-ollama pull minicpm-v
-```
+Requisitos:
+1. Ollama instalado
+2. Modelo descargado:
+  ```bash
+  ollama pull minicpm-v
+  ```
+3. Servidor en ejecución (generalmente automático). Si necesitas arrancarlo manualmente:
+  ```bash
+  ollama serve
+  ```
 
 ## 📖 Uso
 
-### Uso Básico
+### Uso Básico (desde código)
 
 ```typescript
 import { runOCR } from './business-logic/hybrid-ocr';
@@ -101,7 +109,7 @@ async function procesarImagen() {
 }
 ```
 
-### Uso Avanzado
+### Uso Avanzado (APIs internas)
 
 ```typescript
 import { 
@@ -162,15 +170,28 @@ interface CompleteOCRResult {
 
 ## 🧪 Pruebas
 
-Para probar el sistema:
+El script dedicado de pruebas fue eliminado. Opciones actuales:
 
-```bash
-# Ejecutar pruebas
-npx ts-node business-logic/test-hybrid-ocr.ts
+1. Colocar imágenes nuevas en el árbol observado (`./images/...`) y ejecutar el watcher:
+  ```bash
+  bun run index.ts
+  ```
+2. Crear un script temporal, por ejemplo `scripts/manual-test.ts`:
+  ```typescript
+  import { runOCR } from '../business-logic/hybrid-ocr';
+  const main = async () => {
+    const r = await runOCR('./processed-images/ejemplo.jpg');
+    console.log(r);
+  };
+  main();
+  ```
+  Y ejecutarlo:
+  ```bash
+  bun run scripts/manual-test.ts
+  ```
+3. Para depurar solo header o placa: usar `runHeaderOCROnly` o `runPlateOCROnly` en un script similar.
 
-# O desde el sistema principal
-npm run start
-```
+Si más adelante se necesita un runner formal se puede reintroducir uno bajo `scripts/`.
 
 ## 💡 Ventajas del Sistema Híbrido
 
@@ -238,10 +259,12 @@ import { runOCR } from './business-logic/hybrid-ocr';
 // El API es el mismo, pero internamente usa el sistema híbrido
 ```
 
-## 🎯 Próximas Mejoras
+## 🎯 Próximas Mejoras (Backlog sugerido)
 
-- [ ] Cache de resultados para imágenes similares
-- [ ] Validación cruzada entre ambos OCR
-- [ ] Métricas de precisión automáticas
-- [ ] Interfaz web para pruebas manuales
-- [ ] Soporte para más formatos de imagen
+- [ ] Cache / memo de placas recientes (evitar reprocesar mismas imágenes)
+- [ ] Validación cruzada simple (heurísticas sobre longitud de placa y patrón regional)
+- [ ] Modo degradado si IA de placa falla (solo header)
+- [ ] Interfaz web ligera (preview + JSON)
+- [ ] Soporte adicional: WebP / HEIC (si surge necesidad)
+
+Nota: Métricas detalladas fueron desactivadas al eliminar el módulo de métricas. Si se requieren nuevamente, se puede reintroducir un collector ligero solo con tiempos promedio y tasa de éxito.
