@@ -178,11 +178,15 @@ async function runHeaderOCR(imagePath: string, maxRetries: number = OCR_CONFIG.t
         console.log('OCR del header exitoso');
         return result;
       } else {
-        throw new Error('Información crítica faltante (fecha o hora)');
+        // Error más limpio sin stack trace innecesario
+        const missingFields = [];
+        if (!result.date) missingFields.push('fecha');
+        if (!result.time) missingFields.push('hora');
+        throw new Error(`Campos críticos no encontrados: ${missingFields.join(', ')}`);
       }
     } catch (error) {
       lastError = error as Error;
-      console.log(`Intento ${attempt} del OCR del header fallido:`, error);
+      console.log(`Intento ${attempt} del OCR del header fallido: ${lastError.message}`);
       
       if (attempt < maxRetries) {
         console.log('Reintentando OCR del header...');
@@ -192,7 +196,8 @@ async function runHeaderOCR(imagePath: string, maxRetries: number = OCR_CONFIG.t
   }
   
   // Si llegamos aquí, todos los intentos fallaron
-  console.error('OCR del header falló después de todos los intentos');
+  const finalError = lastError?.message || 'OCR del header falló';
+  console.error(`OCR del header falló después de ${maxRetries} intentos: ${finalError}`);
   throw lastError || new Error('OCR del header falló');
 }
 

@@ -73,8 +73,9 @@ async function runHybridOCR(imagePath: string): Promise<CompleteOCRResult> {
     result.measuredSpeed = headerResult.value.measuredSpeed;
     result.processingInfo!.headerOCRSuccess = true;
   } else {
-    console.log('❌ OCR del header falló:', headerResult.reason);
-    result.processingInfo!.errors!.push(`Header OCR: ${headerResult.reason}`);
+    const errorMessage = headerResult.reason instanceof Error ? headerResult.reason.message : headerResult.reason;
+    console.log('❌ OCR del header falló:', errorMessage);
+    result.processingInfo!.errors!.push(`Header OCR: ${errorMessage}`);
   }
 
   // Procesar resultado de la placa (MiniCPM-V)
@@ -88,8 +89,9 @@ async function runHybridOCR(imagePath: string): Promise<CompleteOCRResult> {
       result.processingInfo!.errors!.push('Plate OCR: No se encontró placa');
     }
   } else {
-    console.log('❌ OCR de placa falló:', plateResult.reason);
-    result.processingInfo!.errors!.push(`Plate OCR: ${plateResult.reason}`);
+    const errorMessage = plateResult.reason instanceof Error ? plateResult.reason.message : plateResult.reason;
+    console.log('❌ OCR de placa falló:', errorMessage);
+    result.processingInfo!.errors!.push(`Plate OCR: ${errorMessage}`);
   }
 
   // Calcular tiempo total
