@@ -138,7 +138,10 @@ function parseHeaderText(text: string): HeaderInfo {
   for (const pattern of patterns.speedLimit) {
     const match = fullText.match(pattern);
     if (match && match[1]) {
-      result.speedLimit = match[1].trim();
+      // Extraer solo el número, remover "km/h" y espacios
+      const speedText = match[1].trim();
+      const numberMatch = speedText.match(/(\d+)/);
+      result.speedLimit = numberMatch ? numberMatch[1] : speedText;
       break;
     }
   }
