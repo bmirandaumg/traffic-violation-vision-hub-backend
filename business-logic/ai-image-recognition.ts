@@ -1,6 +1,31 @@
 import { ollamaOCR } from "ollama-ocr";
 import { OCR_CONFIG } from './ocr-config.js';
 
+// Patrones de validación para placas guatemaltecas
+const PLATE_PATTERNS = {
+  particular: /^[P]{1}\d{3}[A-Z]{3}$/,     // P123ABC - Particulares
+  moto: /^[M]{1}\d{3}[A-Z]{3}$/,           // M123ABC - Motocicletas  
+  comercial: /^[C]{1}\d{3}[A-Z]{3}$/,      // C123ABC - Comerciales
+  
+  // Fallback para otros tipos con formato válido 1+3+3
+  unknown: /^[A-Z]{1}\d{3}[A-Z]{3}$/       // X123ABC - Otros tipos no identificados
+};
+
+/**
+ * Valida el formato de una placa guatemalteca
+ */
+function validatePlateFormat(plate: string): { isValid: boolean, type?: string } {
+  const cleanPlate = plate.toUpperCase().replace(/[-\s]/g, '');
+  
+  for (const [type, pattern] of Object.entries(PLATE_PATTERNS)) {
+    if (pattern.test(cleanPlate)) {
+      return { isValid: true, type };
+    }
+  }
+  
+  return { isValid: false };
+}
+
 const PLATE_OCR_SYSTEM_PROMPT = `
 You are a technical OCR system for automated traffic enforcement processing.
 This is a legitimate law enforcement application for speed violation detection.
@@ -43,6 +68,18 @@ async function runPlateOCRWithRetries(imagePath: string, attempt = 1): Promise<a
     // Verificar si el resultado tiene la placa
     if (!result.vehicle || !result.vehicle.plate) {
       throw new Error("Placa no encontrada");
+    }
+
+    // Validar formato de la placa
+    const plateText = result.vehicle.plate.trim();
+    const validation = validatePlateFormat(plateText);
+    
+    if (!validation.isValid) {
+      throw new Error(`Formato de placa inválido: ${plateText}. Se espera formato X123ABC`);
+    }
+
+    if (OCR_CONFIG.logging.logProcessingSteps) {
+      console.log(`✅ Placa válida detectada: ${plateText} (tipo: ${validation.type})`);
     }
 
     return result;
