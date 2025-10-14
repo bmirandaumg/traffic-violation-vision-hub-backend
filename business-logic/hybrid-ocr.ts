@@ -1,6 +1,5 @@
 import { runHeaderOCR, type HeaderInfo } from './tesseract-ocr.js';
 import { runPlateOCR } from './ai-image-recognition.js';
-import { metricsCollector } from './ocr-metrics.js';
 import path from 'path';
 
 interface CompleteOCRResult {
@@ -96,28 +95,7 @@ async function runHybridOCR(imagePath: string): Promise<CompleteOCRResult> {
   // Calcular tiempo total
   const totalTime = Date.now() - startTime;
 
-  // Registrar métricas
-  metricsCollector.recordProcessing({
-    fileName: path.basename(imagePath),
-    success: result.processingInfo!.headerOCRSuccess || result.processingInfo!.plateOCRSuccess,
-    totalTime: totalTime,
-    headerResult: {
-      success: result.processingInfo!.headerOCRSuccess,
-      time: headerTime,
-      fields: {
-        date: result.date,
-        time: result.time,
-        location: result.location,
-        speedLimit: result.speedLimit,
-        measuredSpeed: result.measuredSpeed
-      }
-    },
-    plateResult: {
-      success: result.processingInfo!.plateOCRSuccess,
-      time: plateTime,
-      attempts: plateAttempts
-    }
-  });
+  // (Métricas deshabilitadas: se eliminó ocr-metrics.ts)
 
   // Validar resultado final
   const isValid = validateOCRResult(result);
@@ -196,24 +174,10 @@ async function runPlateOCROnly(imagePath: string): Promise<any> {
 /**
  * Genera reporte de métricas de rendimiento
  */
-function generateMetricsReport(): string {
-  return metricsCollector.generateReport();
-}
-
-/**
- * Exporta las métricas como JSON para análisis
- */
-function exportMetricsData() {
-  return metricsCollector.exportMetrics();
-}
-
-/**
- * Reinicia las métricas (útil para nuevas sesiones de prueba)
- */
-function resetMetrics(): void {
-  metricsCollector.reset();
-  console.log('🔄 Métricas reiniciadas');
-}
+// Stubs de métricas (desactivadas)
+function generateMetricsReport(): string { return 'Metrics disabled'; }
+function exportMetricsData() { return {}; }
+function resetMetrics(): void { /* noop */ }
 
 export { 
   runOCR, 
