@@ -1,4 +1,4 @@
-import { ollamaOCR } from "ollama-ocr";
+import sharp from 'sharp';
 import { OCR_CONFIG } from './ocr-config.js';
 
 // Patrones de validación para placas guatemaltecas
@@ -49,21 +49,179 @@ Return only the JSON object. No explanations.
 
 const MAX_RETRIES = OCR_CONFIG.miniCPM.maxRetries;
 const RETRY_DELAY = OCR_CONFIG.miniCPM.retryDelay;
+const OLLAMA_HOST = OCR_CONFIG.miniCPM.ollamaHost.replace(/\/$/, '');
+const OLLAMA_CHAT_ENDPOINT = `${OLLAMA_HOST}/api/chat`;
+const OLLAMA_GENERATE_ENDPOINT = `${OLLAMA_HOST}/api/generate`;
+
+let keepAliveInterval: ReturnType<typeof setInterval> | null = null;
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+/**
+ * Inicia un ping periódico al modelo para mantenerlo en memoria.
+ */
+function ensureKeepAlive() {
+  if (!OCR_CONFIG.miniCPM.keepAlive.enabled || keepAliveInterval) {
+    return;
+  }
+
+  keepAliveInterval = setInterval(() => {
+    sendKeepAlivePing().catch(error => {
+      console.warn('⚠️ Ping de keep-alive fallido:', error);
+    });
+  }, OCR_CONFIG.miniCPM.keepAlive.intervalMs);
+
+  process.once('exit', () => {
+    if (keepAliveInterval) {
+      clearInterval(keepAliveInterval);
+    }
+  });
+}
+
+async function sendKeepAlivePing(): Promise<void> {
+  try {
+    await fetch(OLLAMA_GENERATE_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: OCR_CONFIG.miniCPM.model,
+        prompt: 'ping',
+        keep_alive: OCR_CONFIG.miniCPM.keepAlive.value,
+        stream: false,
+        options: {
+          num_predict: 1
+        }
+      })
+    });
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Crea un recorte optimizado con resize y compresión para reducir el payload.
+ */
+async function createOptimizedPlateCrop(imagePath: string): Promise<Buffer> {
+  const config = OCR_CONFIG.miniCPM.plateCrop;
+  const metadata = await sharp(imagePath).metadata();
+  const { width, height } = metadata;
+
+  if (!width || !height) {
+    throw new Error('No se pudo obtener las dimensiones de la imagen');
+  }
+
+  const topStart = Math.max(0, Math.floor(height * (config.topOffset)));
+  const bottomEnd = Math.floor(height * (1 - config.bottomMargin));
+  const leftStart = Math.max(0, Math.floor(width * config.leftMargin));
+  const rightEnd = Math.floor(width * (1 - config.rightMargin));
+
+  const cropWidth = Math.max(1, rightEnd - leftStart);
+  const cropHeight = Math.max(1, bottomEnd - topStart);
+
+  if (OCR_CONFIG.logging.logProcessingSteps) {
+    const originalArea = width * height;
+    const cropArea = cropWidth * cropHeight;
+    console.log(`📐 Crop optimizado: ${cropWidth}x${cropHeight} (${Math.round((cropArea / originalArea) * 100)}% del área)`);
+  }
+
+  return await sharp(imagePath)
+    .extract({
+      left: leftStart,
+      top: topStart,
+      width: cropWidth,
+      height: cropHeight
+    })
+    .resize({
+      width: OCR_CONFIG.miniCPM.plateCrop.targetWidth,
+      fit: 'inside',
+      withoutEnlargement: true
+    })
+    .greyscale()
+    .jpeg({
+      quality: OCR_CONFIG.miniCPM.plateCrop.jpegQuality,
+      chromaSubsampling: '4:4:4'
+    })
+    .toBuffer();
+}
+
+/**
+ * Realiza la llamada al endpoint de chat de Ollama usando fetch nativo.
+ */
+async function ollamaChatWithImage(base64Image: string): Promise<string> {
+  const response = await fetch(OLLAMA_CHAT_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: OCR_CONFIG.miniCPM.model,
+      keep_alive: OCR_CONFIG.miniCPM.keepAlive.value,
+      stream: false,
+      options: {
+        num_ctx: OCR_CONFIG.miniCPM.request.maxContextTokens,
+        num_predict: OCR_CONFIG.miniCPM.request.maxOutputTokens,
+        temperature: OCR_CONFIG.miniCPM.request.temperature,
+        top_p: 0.1,
+        format: OCR_CONFIG.miniCPM.request.format
+      },
+      messages: [
+        {
+          role: 'system',
+          content: PLATE_OCR_SYSTEM_PROMPT
+        },
+        {
+          role: 'user',
+          content: 'Extrae la placa en formato JSON.',
+          images: [base64Image]
+        }
+      ]
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Error en respuesta de Ollama (${response.status}): ${errorText}`);
+  }
+
+  const data = await response.json();
+  const content = data?.message?.content;
+
+  if (!content) {
+    throw new Error('La respuesta de Ollama no contiene contenido');
+  }
+
+  return content;
+}
+
+/**
+ * Parser robusto para extraer JSON incluso si hay texto adicional.
+ */
+function extractJSONFromResponse(text: string): any {
+  try {
+    return JSON.parse(text);
+  } catch {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    throw new Error(`No se pudo extraer JSON válido de la respuesta: ${text.substring(0, 120)}...`);
+  }
+}
+
+
 async function runPlateOCRWithRetries(imagePath: string, attempt = 1): Promise<any> {
   try {
-    const text = await ollamaOCR({
-      model: OCR_CONFIG.miniCPM.model,
-      filePath: imagePath,
-      systemPrompt: PLATE_OCR_SYSTEM_PROMPT,
-    });
+    ensureKeepAlive();
+
+    console.log(`🎯 [Intento ${attempt}] OCR de placa optimizado...`);
+    const cropBuffer = await createOptimizedPlateCrop(imagePath);
+    const base64Image = cropBuffer.toString('base64');
+
+    const text = await ollamaChatWithImage(base64Image);
     
     if (OCR_CONFIG.logging.logRawText) {
       console.log('Respuesta cruda del OCR de placa:', text);
     }
-    const result = JSON.parse(text);
+
+    const result = extractJSONFromResponse(text);
     
     // Verificar si el resultado tiene la placa
     if (!result.vehicle || !result.vehicle.plate) {

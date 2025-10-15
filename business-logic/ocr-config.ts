@@ -25,9 +25,29 @@ export const OCR_CONFIG = {
   // Configuración de modelos AI para OCR de placas
   miniCPM: {
     model: 'minicpm-v', // ✅ CONFIRMADO: MiniCPM-V es superior (100% vs 0% de LLaVA)
+    ollamaHost: process.env.OLLAMA_HOST || 'http://localhost:11434',
     maxRetries: 3,
     retryDelay: 1000, // milisegundos
     language: 'english', // Inglés para mejor precisión en estructuras JSON
+    keepAlive: {
+      enabled: process.env.OLLAMA_KEEP_ALIVE_ENABLED !== 'false',
+      intervalMs: parseInt(process.env.OLLAMA_PING_INTERVAL || '120000'), // 2 minutos por defecto
+      value: process.env.OLLAMA_KEEP_ALIVE || '30m'
+    },
+    request: {
+      maxContextTokens: parseInt(process.env.OLLAMA_MAX_CONTEXT_TOKENS || '2048'),
+      maxOutputTokens: parseInt(process.env.OLLAMA_MAX_OUTPUT_TOKENS || '64'),
+      temperature: Number(process.env.OLLAMA_TEMPERATURE ?? 0),
+      format: process.env.OLLAMA_RESPONSE_FORMAT || 'json'
+    },
+    plateCrop: {
+      topOffset: 0.15,
+      bottomMargin: 0.05,
+      leftMargin: 0.05,
+      rightMargin: 0.05,
+      targetWidth: 640,
+      jpegQuality: 72
+    }
   },
   
   // Configuración de validación

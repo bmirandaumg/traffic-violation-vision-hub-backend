@@ -11,6 +11,38 @@ interface HeaderInfo {
   measuredSpeed: string;
 }
 
+let sharedWorkerPromise: ReturnType<typeof createWorker> | null = null;
+let workerExitHookRegistered = false;
+
+async function getSharedWorker() {
+  if (!sharedWorkerPromise) {
+    sharedWorkerPromise = createWorker(OCR_CONFIG.tesseract.language, 1, {
+      logger: m => {
+        if (OCR_CONFIG.logging.logProcessingSteps && m.status === 'recognizing text') {
+          console.log(`Tesseract OCR: ${Math.round(m.progress * 100)}%`);
+        }
+      }
+    });
+
+    if (!workerExitHookRegistered) {
+      workerExitHookRegistered = true;
+      process.once('exit', async () => {
+        try {
+          const workerPromise = sharedWorkerPromise;
+          if (workerPromise) {
+            const worker = await workerPromise;
+            await worker.terminate();
+          }
+        } catch {
+          // Ignorar errores en el cierre
+        }
+      });
+    }
+  }
+
+  return sharedWorkerPromise;
+}
+
 /**
  * Recorta la parte superior de la imagen que contiene la información del header
  */
@@ -57,13 +89,7 @@ async function cropHeaderArea(imagePath: string): Promise<Buffer> {
  * Extrae información del header usando Tesseract OCR
  */
 async function extractHeaderWithTesseract(imagePath: string): Promise<HeaderInfo> {
-  const worker = await createWorker(OCR_CONFIG.tesseract.language, 1, {
-    logger: m => {
-      if (OCR_CONFIG.logging.logProcessingSteps && m.status === 'recognizing text') {
-        console.log(`Tesseract OCR: ${Math.round(m.progress * 100)}%`);
-      }
-    }
-  });
+  const worker = await getSharedWorker();
 
   try {
     // Recortar la imagen al área del header
@@ -80,8 +106,6 @@ async function extractHeaderWithTesseract(imagePath: string): Promise<HeaderInfo
   } catch (error) {
     console.error('Error en Tesseract OCR:', error);
     throw error;
-  } finally {
-    await worker.terminate();
   }
 }
 

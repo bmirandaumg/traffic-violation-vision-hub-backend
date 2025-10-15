@@ -31,8 +31,6 @@ async function runHybridOCR(imagePath: string): Promise<CompleteOCRResult> {
   const startTime = Date.now();
   let headerTime = 0;
   let plateTime = 0;
-  let headerAttempts = 1;
-  let plateAttempts = 1;
   
   const result: CompleteOCRResult = {
     date: '',
@@ -51,47 +49,55 @@ async function runHybridOCR(imagePath: string): Promise<CompleteOCRResult> {
     }
   };
 
-  // Ejecutar ambos OCR en paralelo para mayor eficiencia con medición de tiempo
+  // Ejecutar OCR del header primero para liberar CPU antes de Ollama
   const headerStartTime = Date.now();
-  const plateStartTime = Date.now();
-  
-  const [headerResult, plateResult] = await Promise.allSettled([
-    runHeaderOCR(imagePath),
-    runPlateOCR(imagePath)
-  ]);
+  let headerResult: HeaderInfo | null = null;
+  let headerError: unknown = null;
 
-  headerTime = Date.now() - headerStartTime;
-  plateTime = Date.now() - plateStartTime;
-
-  // Procesar resultado del header (Tesseract)
-  if (headerResult.status === 'fulfilled') {
+  try {
+    headerResult = await runHeaderOCR(imagePath);
     console.log('✅ OCR del header exitoso');
-    result.date = headerResult.value.date;
-    result.time = headerResult.value.time;
-    result.location = headerResult.value.location;
-    result.speedLimit = headerResult.value.speedLimit;
-    result.measuredSpeed = headerResult.value.measuredSpeed;
-    result.processingInfo!.headerOCRSuccess = true;
-  } else {
-    const errorMessage = headerResult.reason instanceof Error ? headerResult.reason.message : headerResult.reason;
+  } catch (error) {
+    headerError = error;
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.log('❌ OCR del header falló:', errorMessage);
     result.processingInfo!.errors!.push(`Header OCR: ${errorMessage}`);
+  } finally {
+    headerTime = Date.now() - headerStartTime;
   }
 
-  // Procesar resultado de la placa (MiniCPM-V)
-  if (plateResult.status === 'fulfilled') {
+  if (headerResult) {
+    result.date = headerResult.date;
+    result.time = headerResult.time;
+    result.location = headerResult.location;
+    result.speedLimit = headerResult.speedLimit;
+    result.measuredSpeed = headerResult.measuredSpeed;
+    result.processingInfo!.headerOCRSuccess = true;
+  }
+
+  // Ejecutar OCR de placas después del header para evitar contención
+  const plateStartTime = Date.now();
+  let plateResult: any = null;
+  let plateError: unknown = null;
+
+  try {
+    plateResult = await runPlateOCR(imagePath);
     console.log('✅ OCR de placa exitoso');
-    if (plateResult.value.vehicle && plateResult.value.vehicle.plate) {
-      result.vehicle.plate = plateResult.value.vehicle.plate;
-      result.processingInfo!.plateOCRSuccess = true;
-    } else {
-      console.log('⚠️ OCR de placa no encontró la placa');
-      result.processingInfo!.errors!.push('Plate OCR: No se encontró placa');
-    }
-  } else {
-    const errorMessage = plateResult.reason instanceof Error ? plateResult.reason.message : plateResult.reason;
+  } catch (error) {
+    plateError = error;
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.log('❌ OCR de placa falló:', errorMessage);
     result.processingInfo!.errors!.push(`Plate OCR: ${errorMessage}`);
+  } finally {
+    plateTime = Date.now() - plateStartTime;
+  }
+
+  if (plateResult && plateResult.vehicle && plateResult.vehicle.plate) {
+    result.vehicle.plate = plateResult.vehicle.plate;
+    result.processingInfo!.plateOCRSuccess = true;
+  } else if (!plateError) {
+    console.log('⚠️ OCR de placa no encontró la placa');
+    result.processingInfo!.errors!.push('Plate OCR: No se encontró placa');
   }
 
   // Calcular tiempo total
@@ -112,6 +118,7 @@ async function runHybridOCR(imagePath: string): Promise<CompleteOCRResult> {
     headerSuccess: result.processingInfo!.headerOCRSuccess,
     plateSuccess: result.processingInfo!.plateOCRSuccess
   });
+  console.log(`⏱️ Tiempos -> header: ${headerTime}ms, placa: ${plateTime}ms`);
 
   return result;
 }
