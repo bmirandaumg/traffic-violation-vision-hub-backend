@@ -20,7 +20,6 @@
   "dependencies": {
     "@types/pg": "^8.10.9",
     "async": "^3.2.6",
-    "bun": "^1.2.23",
     "chokidar": "^4.0.3",
     "dotenv": "^17.2.1",
     "ollama-ocr": "^0.0.2",

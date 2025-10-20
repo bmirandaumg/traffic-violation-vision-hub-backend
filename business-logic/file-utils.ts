@@ -1,11 +1,10 @@
 import { mkdir, access, rename } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import path from 'node:path';
-import dotenv from 'dotenv';
 
 const baseDir = process.env.FILES_BASE_DIR || process.cwd();
 const processedDir = process.env.PROCESSED_FILES_DIR || 'processed-images';
-export const PROCESSED_FILES_DIR = `${baseDir}/${processedDir}`;
+export const PROCESSED_FILES_DIR = path.join(baseDir, processedDir);
 
 export async function ensureProcessedDirectoryExists(): Promise<string> {
   const processingPath = PROCESSED_FILES_DIR;
@@ -25,11 +24,12 @@ export function getProcessedFilePath(originalFilePath: string, cruise: string): 
 }
 
 export async function moveFileToProcessed(filePath: string, cruise: string): Promise<string> {
+  const sourcePath = path.isAbsolute(filePath) ? filePath : path.join(baseDir, filePath);
+  const destinationPath = getProcessedFilePath(sourcePath, cruise);
 
   try {
-    // Verificar y crear el directorio base de procesados si no existe
     const processedBaseDir = await ensureProcessedDirectoryExists();
-    // Construir la ruta de la subcarpeta del crucero
+
     const cruiseDir = path.join(PROCESSED_FILES_DIR, cruise);
     try {
       await access(cruiseDir, constants.F_OK);
@@ -39,35 +39,37 @@ export async function moveFileToProcessed(filePath: string, cruise: string): Pro
     }
     console.log(`Directorio de procesados: ${processedBaseDir}`);
 
-    // Verificar que el archivo origen existe
-    await access(filePath, constants.F_OK);
+    try {
+      await access(sourcePath, constants.F_OK);
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error !== null && (error as NodeJS.ErrnoException).code === 'ENOENT') {
+        console.warn(`Archivo ya no existe (posiblemente procesado previamente): ${sourcePath}`);
+        return destinationPath;
+      }
+      throw error;
+    }
 
-    // Obtener la nueva ruta del archivo usando la función
-    const newPath = getProcessedFilePath(filePath, cruise);
-    console.log(`Ruta destino del archivo: ${newPath}`);
+    console.log(`Ruta destino del archivo: ${destinationPath}`);
+    await rename(sourcePath, destinationPath);
+    console.log(`Archivo movido exitosamente a: ${destinationPath}`);
 
-    // Mover el archivo
-    await rename(filePath, newPath);
-    console.log(`Archivo movido exitosamente a: ${newPath}`);
-
-    return newPath;
+    return destinationPath;
   } catch (error) {
-    console.error(`Error moviendo archivo ${filePath}:`, error);
-    throw new Error(`Error moviendo archivo ${filePath}: ${JSON.stringify(error)}`);
+    console.error(`Error moviendo archivo ${sourcePath}:`, error);
+    throw new Error(`Error moviendo archivo ${sourcePath}: ${JSON.stringify(error)}`);
   }
 }
 
 export function toRelativePath(absolutePath: string): string {
+  const normalizedAbsolute = path.normalize(absolutePath);
+  const normalizedBase = path.normalize(PROCESSED_FILES_DIR);
 
-const normalizedAbsolute = path.normalize(absolutePath);
-const normalizedBase = path.normalize(PROCESSED_FILES_DIR);
+  if (!normalizedAbsolute.startsWith(normalizedBase)) {
+    return absolutePath;
+  }
 
-if (!normalizedAbsolute.startsWith(normalizedBase)) {
-  return absolutePath;
-}
+  const relativePath = normalizedAbsolute.substring(normalizedBase.length)
+    .replace(/^[/\\]+/, '');
 
-const relativePath = normalizedAbsolute.substring(normalizedBase.length)
-  .replace(/^[/\\]+/, '');
-
-return relativePath;
+  return relativePath;
 }
