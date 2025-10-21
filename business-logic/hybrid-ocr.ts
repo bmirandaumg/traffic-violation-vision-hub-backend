@@ -1,6 +1,9 @@
 import { runHeaderOCR, type HeaderInfo } from './tesseract-ocr.js';
 import { runPlateOCR } from './ai-image-recognition.js';
+import { ocrMetricsLite } from '../metrics/ocr-metrics-lite.js';
 import path from 'path';
+import 'dotenv/config';
+
 
 interface CompleteOCRResult {
   date: string;
@@ -119,6 +122,22 @@ async function runHybridOCR(imagePath: string): Promise<CompleteOCRResult> {
     plateSuccess: result.processingInfo!.plateOCRSuccess
   });
   console.log(`⏱️ Tiempos -> header: ${headerTime}ms, placa: ${plateTime}ms`);
+
+  const metricsEnabled = process.env.OCR_METRICS_ENABLED === 'true';
+  if (metricsEnabled) {
+    ocrMetricsLite.record(
+      headerTime,
+      plateTime,
+      result.processingInfo!.headerOCRSuccess,
+      result.processingInfo!.plateOCRSuccess
+    );
+
+    if (ocrMetricsLite.total % Number(process.env.OCR_METRICS_NUMBER_OF_BUCKETS) === 0) {
+  ocrMetricsLite.printSummary();
+    }
+  }
+
+
 
   return result;
 }
