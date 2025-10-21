@@ -3,7 +3,7 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --project tsconfig.build.json",
     "start": "bun run index.ts",
     "start:node": "node --loader ts-node/esm index.ts"
   },

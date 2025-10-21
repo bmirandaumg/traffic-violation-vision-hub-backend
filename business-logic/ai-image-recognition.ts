@@ -223,13 +223,16 @@ async function runPlateOCRWithRetries(imagePath: string, attempt = 1): Promise<a
 
     const result = extractJSONFromResponse(text);
     
-    // Verificar si el resultado tiene la placa
-    if (!result.vehicle || !result.vehicle.plate) {
-      throw new Error("Placa no encontrada");
+    // Normalizar estructura permitiendo respuestas compactas { "plate": "..." }
+    const extractedPlate = (result.vehicle && result.vehicle.plate)
+      ? result.vehicle.plate
+      : result.plate ?? result.Plate ?? result.licensePlate ?? result.placa;
+    
+    if (!extractedPlate || typeof extractedPlate !== 'string' || extractedPlate.trim() === '') {
+      throw new Error('Placa no encontrada');
     }
 
-    // Validar formato de la placa
-    const plateText = result.vehicle.plate.trim();
+    const plateText = extractedPlate.trim();
     const validation = validatePlateFormat(plateText);
     
     if (!validation.isValid) {
@@ -240,21 +243,34 @@ async function runPlateOCRWithRetries(imagePath: string, attempt = 1): Promise<a
       console.log(`✅ Placa válida detectada: ${plateText} (tipo: ${validation.type})`);
     }
 
-    return result;
+    return {
+      ...result,
+      vehicle: {
+        plate: plateText
+      }
+    };
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
     if (attempt < MAX_RETRIES) {
       console.log(`Intento ${attempt} de OCR de placa fallido, reintentando en ${RETRY_DELAY/1000} segundos...`);
       await sleep(RETRY_DELAY);
       return runPlateOCRWithRetries(imagePath, attempt + 1);
     }
-    return { vehicle: { plate: "" }, rawText: `Error después de ${MAX_RETRIES} intentos: ${JSON.stringify(error)}` };
+    throw new Error(`OCR de placa falló después de ${MAX_RETRIES} intentos: ${message}`);
   }
 }
 
 async function runPlateOCR(imagePath: string) {
-  const result = await runPlateOCRWithRetries(imagePath);
-  console.log('Resultado OCR de placa:', result);
-  return result;
+  try {
+    const result = await runPlateOCRWithRetries(imagePath);
+    console.log('Resultado OCR de placa:', result);
+    return result;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`❌ Error definitivo en OCR de placa: ${message}`);
+    throw new Error(message, error instanceof Error ? { cause: error } : undefined);
+  }
 }
 
 export { runPlateOCR };
