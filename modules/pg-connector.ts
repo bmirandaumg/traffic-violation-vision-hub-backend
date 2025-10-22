@@ -1,6 +1,6 @@
 import { Client } from "pg";
-import { getConfig } from "./config";
-import { logger } from "./logger";
+import { getConfig } from "./config.js";
+import { logger } from "./logger.js";
 
 let client: Client | null = null;
 

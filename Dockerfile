@@ -17,6 +17,7 @@ RUN npm ci
 FROM base AS build
 ENV NODE_ENV=development
 COPY --from=deps /app/node_modules ./node_modules
+COPY package*.json ./
 COPY tsconfig*.json ./
 COPY index.ts ./ 
 COPY business-logic ./business-logic

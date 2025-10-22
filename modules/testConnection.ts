@@ -1,4 +1,4 @@
-import { connect, query } from "./pg-connector";
+import { connect, query } from "./pg-connector.js";
 
 async function testConnection() {
   try {

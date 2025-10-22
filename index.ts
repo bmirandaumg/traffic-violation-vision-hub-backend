@@ -2,12 +2,12 @@ import chokidar from "chokidar";
 import type { FSWatcher } from "chokidar";
 import async from "async";
 import path, { resolve } from "path";
-import { logger } from "./modules/logger";
+import { logger } from "./modules/logger.js";
 import { runOCR } from "./business-logic/hybrid-ocr.js";
-import { resolvePath } from "./business-logic/file-explode";
+import { resolvePath } from "./business-logic/file-explode.js";
 import { log } from "console";
-import { processRecord } from "./business-logic/db-process";
-import { moveFileToProcessed, toRelativePath } from "./business-logic/file-utils";
+import { processRecord } from "./business-logic/db-process.js";
+import { moveFileToProcessed, toRelativePath } from "./business-logic/file-utils.js";
 import 'dotenv/config';
 import { json } from "stream/consumers";
 

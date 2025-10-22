@@ -1,5 +1,5 @@
-import { logger } from "../modules/logger";
-import { connect, query, close } from "../modules/pg-connector";
+import { logger } from "../modules/logger.js";
+import { connect, query, close } from "../modules/pg-connector.js";
 
 /**
  * Convierte fecha de formato DD/MM/YYYY a YYYY-MM-DD
