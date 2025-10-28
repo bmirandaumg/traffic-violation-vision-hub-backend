@@ -36,6 +36,8 @@ COPY --from=build /app/tessdata ./tessdata
 RUN mkdir -p images processed-images reports \
  && useradd --system --uid 1001 watcher \
  && chown -R watcher:watcher /app
+COPY scripts/create-folders.sh ./scripts/create-folders.sh
+RUN ./scripts/create-folders.sh
 USER watcher
 VOLUME ["/app/images", "/app/processed-images", "/app/reports"]
 EXPOSE 3000

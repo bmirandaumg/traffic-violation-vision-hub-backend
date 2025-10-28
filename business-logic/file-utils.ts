@@ -1,4 +1,4 @@
-import { mkdir, access, rename } from 'node:fs/promises';
+import { mkdir, access, rename, copyFile, unlink } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import path from 'node:path';
 
@@ -50,7 +50,16 @@ export async function moveFileToProcessed(filePath: string, cruise: string): Pro
     }
 
     console.log(`Ruta destino del archivo: ${destinationPath}`);
-    await rename(sourcePath, destinationPath);
+    try {
+      await rename(sourcePath, destinationPath);
+    } catch (error) {
+      if (typeof error === 'object' && error !== null && (error as NodeJS.ErrnoException).code === 'EXDEV') {
+        await copyFile(sourcePath, destinationPath);
+        await unlink(sourcePath);
+      } else {
+        throw error;
+      }
+    }
     console.log(`Archivo movido exitosamente a: ${destinationPath}`);
 
     return destinationPath;
