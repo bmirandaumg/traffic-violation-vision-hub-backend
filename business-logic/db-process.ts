@@ -66,20 +66,32 @@ async function processRecord(jsonFilePath: any, ocrResult: any, filePath: string
     const finalData = mergeDataWithFallback(jsonFilePath, ocrResult);
     
     const cruiseExist = "SELECT id FROM cruise WHERE cruise_name = $1";
+    const insertCruise =
+      "INSERT INTO cruise (cruise_name) VALUES ($1) RETURNING id";
+    const cruiseFromPath = jsonFilePath?.cruise;
+    let cruiseNameToUse = finalData.cruise;
     let cruiseId;
-    const cruiseRes = await query(cruiseExist, [finalData.cruise]);
+
+    let cruiseRes = await query(cruiseExist, [cruiseNameToUse]);
+
+    if (cruiseRes.rows.length === 0 && cruiseFromPath && cruiseFromPath !== cruiseNameToUse) {
+      logger.info(
+        `Crucero ${cruiseNameToUse} no encontrado. Probando con el nombre del path: ${cruiseFromPath}`
+      );
+      cruiseNameToUse = cruiseFromPath;
+      cruiseRes = await query(cruiseExist, [cruiseNameToUse]);
+    }
 
     if (cruiseRes.rows.length > 0) {
-      logger.info(`Crucero existente encontrado: ${finalData.cruise}`);
+      logger.info(`Crucero existente encontrado: ${cruiseNameToUse}`);
       cruiseId = cruiseRes.rows[0].id;
     } else {
-      logger.info(`Creando nuevo crucero: ${finalData.cruise}`);
-      const insertCruise =
-        "INSERT INTO cruise (cruise_name) VALUES ($1) RETURNING id";
-      console.log({ insertCruise })
-      const newCruiseRes = await query(insertCruise, [finalData.cruise]);
+      logger.info(`Creando nuevo crucero: ${cruiseNameToUse}`);
+      const newCruiseRes = await query(insertCruise, [cruiseNameToUse]);
       cruiseId = newCruiseRes.rows[0].id;
     }
+
+    finalData.cruise = cruiseNameToUse;
 
     const insertQuery =
       "INSERT INTO public.photo (photo_date, id_cruise, photo_name, photo_path, photo_info) VALUES ($1, $2, $3, $4, $5)";
