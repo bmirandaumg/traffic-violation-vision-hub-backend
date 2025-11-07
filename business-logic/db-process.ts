@@ -69,7 +69,8 @@ async function processRecord(jsonFilePath: any, ocrResult: any, filePath: string
     const insertCruise =
       "INSERT INTO cruise (cruise_name) VALUES ($1) RETURNING id";
     const cruiseFromPath = jsonFilePath?.cruise;
-    let cruiseNameToUse = finalData.cruise;
+    const originalCruiseName = finalData.cruise;
+    let cruiseNameToUse = originalCruiseName;
     let cruiseId;
 
     let cruiseRes = await query(cruiseExist, [cruiseNameToUse]);
@@ -91,7 +92,17 @@ async function processRecord(jsonFilePath: any, ocrResult: any, filePath: string
       cruiseId = newCruiseRes.rows[0].id;
     }
 
+    const cruiseNameAdjusted = originalCruiseName !== cruiseNameToUse;
+    if (cruiseNameAdjusted) {
+      logger.info(
+        `Actualizando cruise final para foto: ${finalData.photoName} → ${cruiseNameToUse}`
+      );
+    }
     finalData.cruise = cruiseNameToUse;
+    const photoInfo =
+      cruiseNameAdjusted && ocrResult && typeof ocrResult === "object"
+        ? { ...ocrResult, location: cruiseNameToUse }
+        : ocrResult;
 
     const insertQuery =
       "INSERT INTO public.photo (photo_date, id_cruise, photo_name, photo_path, photo_info) VALUES ($1, $2, $3, $4, $5)";
@@ -100,7 +111,7 @@ async function processRecord(jsonFilePath: any, ocrResult: any, filePath: string
       cruiseId,
       finalData.photoName,
       filePath,
-      ocrResult,
+      photoInfo,
     ];
 
     await query(insertQuery, values);
