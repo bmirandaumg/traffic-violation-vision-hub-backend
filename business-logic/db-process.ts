@@ -18,6 +18,17 @@ function convertTesseractDate(tesseractDate: string): string | null {
 }
 
 /**
+ * Elimina metadatos internos antes de persistir el JSON en photo_info
+ */
+function stripProcessingInfo(info: any) {
+  if (!info || typeof info !== 'object') {
+    return info;
+  }
+  const { processingInfo, ...rest } = info;
+  return rest;
+}
+
+/**
  * Combina datos de Tesseract con fallback del path
  * Prioridad: Tesseract > Path
  */
@@ -103,6 +114,7 @@ async function processRecord(jsonFilePath: any, ocrResult: any, filePath: string
       cruiseNameAdjusted && ocrResult && typeof ocrResult === "object"
         ? { ...ocrResult, location: cruiseNameToUse }
         : ocrResult;
+    const photoInfoToStore = stripProcessingInfo(photoInfo);
 
     const insertQuery =
       "INSERT INTO public.photo (photo_date, id_cruise, photo_name, photo_path, photo_info) VALUES ($1, $2, $3, $4, $5)";
@@ -111,7 +123,7 @@ async function processRecord(jsonFilePath: any, ocrResult: any, filePath: string
       cruiseId,
       finalData.photoName,
       filePath,
-      photoInfo,
+      photoInfoToStore,
     ];
 
     await query(insertQuery, values);
